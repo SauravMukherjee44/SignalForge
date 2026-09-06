@@ -1493,7 +1493,9 @@ export default function SignalForgeApp({
           <span>SF</span>
           <div>
             <small>WORKSPACE</small>
-            <b>{workspace.user.organizationName}</b>
+            <b title={workspace.user.organizationName}>
+              {workspace.user.organizationName}
+            </b>
           </div>
           <ChevronRight size={15} />
         </div>

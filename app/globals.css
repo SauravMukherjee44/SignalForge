@@ -5293,6 +5293,10 @@ body {
 .workspace-switcher {
   margin: 17px 0 25px;
   min-height: 62px;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: 36px minmax(0, 1fr) 18px;
+  overflow: hidden;
   border-radius: 17px;
   border-color: rgba(71, 97, 196, 0.13);
   background: linear-gradient(
@@ -5324,6 +5328,26 @@ body {
 .profile b {
   color: #1a2749;
   font-size: 14px;
+}
+
+.workspace-switcher div,
+.workspace-switcher b {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.workspace-switcher b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-switcher > svg {
+  width: 18px;
+  height: 18px;
+  justify-self: end;
+  flex-shrink: 0;
 }
 
 .nav-label {
