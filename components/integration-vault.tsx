@@ -10,6 +10,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { BrandIcon } from '@/components/brand-icon';
 
 export type ConfigProvider =
   | 'agora'
@@ -95,6 +96,17 @@ const providerFields: Record<ConfigProvider, Field[]> = {
       key: 'DATADOG_QUEUE_LAG_QUERY',
       label: 'Queue lag query',
       placeholder: 'avg:payments.queue.lag{region:apac}',
+    },
+    {
+      key: 'DATADOG_DASHBOARD_EMBED_BASE_URL',
+      label: 'Secure dashboard embed base URL',
+      placeholder: 'https://p.datadoghq.com/sb/...',
+    },
+    {
+      key: 'DATADOG_DASHBOARD_EMBED_CREDENTIAL',
+      label: 'Secure embed credential',
+      placeholder: 'Stored server-side for signed sessions',
+      secret: true,
     },
   ],
   opentelemetry: [
@@ -268,7 +280,7 @@ export function IntegrationVault({
               key={item}
               onClick={() => onProviderChange(item)}
             >
-              <span>{providerLabels[item].slice(0, 2).toUpperCase()}</span>
+              <BrandIcon brand={item} size="sm" />
               {providerLabels[item]}
             </button>
           ))}
@@ -276,9 +288,12 @@ export function IntegrationVault({
       </div>
       <div className="vault-form">
         <div className="vault-form-heading">
-          <div>
-            <small>CONFIGURING</small>
-            <h3>{providerLabels[provider]}</h3>
+          <div className="vault-configuring">
+            <BrandIcon brand={provider} size="md" labelled />
+            <div>
+              <small>CONFIGURING</small>
+              <h3>{providerLabels[provider]}</h3>
+            </div>
           </div>
           <span>
             <EyeOff size={15} /> Secret values stay masked

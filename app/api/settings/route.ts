@@ -4,13 +4,16 @@ import {
   publicConfiguration,
   setConfig,
 } from '@/lib/runtime-config';
+import { requireUser } from '@/lib/auth';
 
 const isLocalRequest = (request: Request) => {
   const host = request.headers.get('host') ?? '';
   return /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host);
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
   return Response.json({
     ...publicConfiguration(),
     storage: 'server-memory',
@@ -18,6 +21,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
+  if (!['owner','admin'].includes(auth.user.organizationRole)) return Response.json({ error: 'Administrator access is required.' }, { status: 403 });
   if (!isLocalRequest(request)) {
     return Response.json(
       { error: 'Runtime secret entry is available only on localhost.' },
@@ -42,6 +48,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
+  if (!['owner','admin'].includes(auth.user.organizationRole)) return Response.json({ error: 'Administrator access is required.' }, { status: 403 });
   if (!isLocalRequest(request)) {
     return Response.json(
       { error: 'Runtime secret clearing is available only on localhost.' },

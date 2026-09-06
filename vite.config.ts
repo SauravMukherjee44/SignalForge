@@ -35,6 +35,13 @@ const localBindingConfig = {
 };
 
 export default defineConfig(async () => {
+  if (process.env.SIGNALFORGE_PLATFORM === 'railway') {
+    return {
+      css: { postcss: { plugins: [tailwindcss()] } },
+      resolve: { alias: { 'cloudflare:workers': new URL('./lib/railway-bindings.ts', import.meta.url).pathname } },
+      plugins: [vinext()],
+    };
+  }
   // Keep Wrangler and Miniflare state project-local. These are non-secret tool
   // settings; application environment belongs in ignored `.env*` files.
   process.env.WRANGLER_WRITE_LOGS ??= 'false';

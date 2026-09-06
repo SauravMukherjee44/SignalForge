@@ -1,7 +1,11 @@
 import { RtcRole, RtcTokenBuilder } from 'agora-token';
 import { getConfig } from '@/lib/runtime-config';
+import { authorizeRoom, requireUser } from '@/lib/auth';
+import { consumeUsage, rateLimitResponse } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
   const { searchParams } = new URL(request.url);
   const channel = searchParams.get('channel')?.trim();
   const requestedUid = Number(searchParams.get('uid') ?? '0');
@@ -11,6 +15,9 @@ export async function GET(request: Request) {
   if (!channel || channel.length > 64 || !/^[A-Za-z0-9_-]+$/.test(channel)) {
     return Response.json({ error: 'Invalid channel name.' }, { status: 400 });
   }
+  if (!(await authorizeRoom(auth.user, channel))) return Response.json({ error: 'Room access denied.' }, { status: 403 });
+  const usage = await consumeUsage(auth.user, 'agora');
+  if (!usage.allowed) return rateLimitResponse(usage.limit);
   if (!appId)
     return Response.json(
       { error: 'Agora App ID is not configured.' },

@@ -24,7 +24,7 @@ const resource = {
     { key: 'service.name', value: { stringValue: 'signalforge' } },
     {
       key: 'deployment.environment',
-      value: { stringValue: 'local-hackathon' },
+      value: { stringValue: process.env.NODE_ENV === 'production' ? 'production' : 'local' },
     },
   ],
 };

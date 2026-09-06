@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SignalForge technical architecture</title>
+    <style>
+      * { box-sizing: border-box; }
+      :root {
+        --ink: #111b3c;
+        --muted: #65749b;
+        --line: #d9e1fb;
+        --blue: #2d73f6;
+        --violet: #7951f6;
+        --cyan: #31c8eb;
+        --mint: #17bd91;
+        --pink: #ee5d87;
+      }
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          linear-gradient(rgba(255,255,255,.72), rgba(246,248,255,.84)),
+          url("architecture-visual-treatment.png") center / cover no-repeat;
+      }
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image: radial-gradient(#cdd8fb 1.1px, transparent 1.1px);
+        background-size: 26px 26px;
+        opacity: .34;
+      }
+      .frame { position: relative; z-index: 1; height: 100%; padding: 48px 54px 42px; }
+      header { display: flex; align-items: flex-start; justify-content: space-between; }
+      .brand { display: flex; align-items: center; gap: 18px; }
+      .mark {
+        width: 70px; height: 70px; border-radius: 24px;
+        display: grid; place-items: center; color: white; font-size: 28px; font-weight: 900;
+        background: conic-gradient(from 210deg, #2a73fb, #3bd8ef, #7652f8, #2a73fb);
+        box-shadow: 0 16px 36px rgba(78,83,231,.3), inset 0 0 0 9px rgba(255,255,255,.22);
+      }
+      .eyebrow { color: #4962d7; font-size: 15px; font-weight: 850; letter-spacing: .18em; text-transform: uppercase; }
+      h1 { margin: 5px 0 0; font-size: 40px; line-height: 1.05; letter-spacing: -.04em; }
+      .subtitle { margin: 8px 0 0; color: var(--muted); font-size: 18px; }
+      .badges { display: flex; gap: 10px; padding-top: 7px; }
+      .badge { padding: 11px 16px; border: 1px solid #d4ddfa; border-radius: 999px; background: rgba(255,255,255,.8); color: #536187; font-size: 14px; font-weight: 750; }
+      .stage {
+        position: relative; margin-top: 30px; height: 793px; border: 1px solid #d7def8; border-radius: 36px;
+        background: rgba(252,253,255,.68); box-shadow: 0 30px 80px rgba(58,75,143,.13); overflow: hidden;
+      }
+      .stage::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 52% 44%, rgba(102,86,249,.12), transparent 32%); }
+      .railway {
+        position: absolute; inset: 23px; border: 1.5px dashed #bfc9ee; border-radius: 28px;
+      }
+      .railway-label { position: absolute; right: 24px; top: 18px; color: #7985a8; font-size: 13px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
+      .node {
+        position: absolute; border: 1px solid rgba(191,201,238,.9); border-radius: 24px; background: rgba(255,255,255,.88);
+        box-shadow: 0 15px 38px rgba(50,64,128,.11); padding: 20px 22px;
+      }
+      .node .top { display: flex; align-items: center; gap: 12px; }
+      .icon { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; color: white; font-weight: 900; font-size: 19px; box-shadow: 0 9px 22px rgba(67,78,189,.2); }
+      .icon.blue { background: linear-gradient(135deg, var(--blue), #62bde8); }
+      .icon.violet { background: linear-gradient(135deg, #5b5df8, var(--violet)); }
+      .icon.cyan { background: linear-gradient(135deg, #11aedb, #4fe0d1); }
+      .icon.mint { background: linear-gradient(135deg, #16aa83, #45d5b1); }
+      .icon.pink { background: linear-gradient(135deg, #ee5d87, #ff8e71); }
+      .title { font-size: 20px; font-weight: 850; letter-spacing: -.02em; }
+      .small { margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.42; }
+      .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+      .chip { padding: 6px 9px; border-radius: 8px; color: #50618e; background: #f1f4ff; font-size: 11px; font-weight: 800; }
+      .participants { left: 54px; top: 90px; width: 295px; height: 157px; }
+      .agora { left: 407px; top: 74px; width: 309px; height: 188px; border-color: #a9dff0; }
+      .core { left: 782px; top: 55px; width: 490px; height: 245px; border-color: #bbb4ff; background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(240,238,255,.92)); }
+      .outputs { right: 60px; top: 72px; width: 360px; height: 212px; }
+      .policy { right: 68px; top: 344px; width: 350px; height: 176px; border-color: #ffc6d5; }
+      .collab { right: 52px; bottom: 55px; width: 382px; height: 181px; }
+      .store { left: 768px; bottom: 42px; width: 485px; height: 207px; border-color: #b8e8d9; }
+      .otel { left: 405px; bottom: 65px; width: 300px; height: 164px; }
+      .datadog { left: 52px; bottom: 49px; width: 297px; height: 196px; }
+      .legend { position: absolute; left: 64px; top: 320px; width: 620px; padding: 22px 24px; border-radius: 22px; border: 1px solid #d7def8; background: rgba(255,255,255,.78); }
+      .legend h2 { margin: 0; font-size: 22px; letter-spacing: -.03em; }
+      .legend p { margin: 8px 0 0; color: #687699; font-size: 15px; line-height: 1.45; }
+      .principles { display: flex; gap: 8px; margin-top: 15px; }
+      .principles span { color: #4358b7; background: #eef2ff; border-radius: 10px; padding: 8px 10px; font-size: 12px; font-weight: 800; }
+      svg.arrows { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+      .flow { fill: none; stroke: url(#flow); stroke-width: 4; stroke-linecap: round; opacity: .82; }
+      .feedback { fill: none; stroke: #25b992; stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 8 9; opacity: .82; }
+      .secure { fill: none; stroke: #ee6b92; stroke-width: 3.5; stroke-linecap: round; opacity: .8; }
+      .dot { fill: #fff; stroke-width: 5; }
+      .footer { position: absolute; bottom: 14px; left: 54px; color: #7481a4; font-size: 12px; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main class="frame">
+      <header>
+        <div class="brand">
+          <div class="mark">SF</div>
+          <div>
+            <div class="eyebrow">Production technical architecture</div>
+            <h1>From live voice to verified operational outcomes.</h1>
+            <p class="subtitle">A human-governed incident control plane running on Railway.</p>
+          </div>
+        </div>
+        <div class="badges">
+          <span class="badge">Real-time participation</span>
+          <span class="badge">Evidence-linked memory</span>
+          <span class="badge">Audited approval</span>
+        </div>
+      </header>
+
+      <section class="stage">
+        <div class="railway"><span class="railway-label">Railway production environment · encrypted variables</span></div>
+        <svg class="arrows" viewBox="0 0 1812 793" aria-hidden="true">
+          <defs><linearGradient id="flow" x1="0" x2="1"><stop stop-color="#31c8eb"/><stop offset="1" stop-color="#7852f6"/></linearGradient></defs>
+          <path class="flow" d="M349 166 C372 166 383 166 407 166"/>
+          <path class="flow" d="M716 166 C744 166 755 166 782 166"/>
+          <path class="flow" d="M1272 166 C1310 166 1330 166 1400 166"/>
+          <path class="secure" d="M1228 270 C1320 290 1396 312 1480 344"/>
+          <path class="secure" d="M1575 520 C1575 548 1575 570 1575 588"/>
+          <path class="feedback" d="M434 645 C370 620 335 598 304 563"/>
+          <path class="feedback" d="M187 548 C232 463 516 400 780 310"/>
+          <path class="flow" d="M780 300 C738 354 660 486 602 564"/>
+          <path class="flow" d="M705 646 C728 646 744 646 768 646"/>
+          <path class="feedback" d="M1253 651 C1340 651 1378 651 1430 651"/>
+          <circle class="dot" cx="407" cy="166" r="5" stroke="#31c8eb"/><circle class="dot" cx="782" cy="166" r="5" stroke="#7454f6"/>
+          <circle class="dot" cx="1400" cy="166" r="5" stroke="#7454f6"/><circle class="dot" cx="1480" cy="344" r="5" stroke="#ee6b92"/>
+        </svg>
+
+        <article class="node participants"><div class="top"><div class="icon blue">01</div><div class="title">Incident room</div></div><div class="small">Humans, roles, presence, and specialist voice responders.</div><div class="chips"><span class="chip">Browser UI</span><span class="chip">RBAC</span><span class="chip">Invites</span></div></article>
+        <article class="node agora"><div class="top"><div class="icon cyan">A</div><div class="title">Agora media plane</div></div><div class="small">RTC audio, secure server-issued tokens, speaker identity, remote playback, and agent sessions.</div><div class="chips"><span class="chip">SD-RTN</span><span class="chip">RTC SDK</span><span class="chip">Agent SDK</span></div></article>
+        <article class="node core"><div class="top"><div class="icon violet">✦</div><div><div class="title">SignalForge intelligence service</div><div class="small" style="margin-top:3px">Vinext + React 19 + TypeScript</div></div></div><div class="chips" style="margin-top:18px"><span class="chip">Progressive transcript</span><span class="chip">Gemini Flash</span><span class="chip">Role council</span><span class="chip">State reconciler</span><span class="chip">Conflict detector</span><span class="chip">Information-gain ranking</span></div><div class="small">Finalized speech becomes typed, attributable evidence—not an autonomous root-cause claim.</div></article>
+        <article class="node outputs"><div class="top"><div class="icon blue">↗</div><div class="title">Live projections</div></div><div class="small">Shared understanding updates continuously from one incident state.</div><div class="chips"><span class="chip">Evidence graph</span><span class="chip">Incident pulse</span><span class="chip">Missions</span><span class="chip">Recommendations</span></div></article>
+        <article class="node policy"><div class="top"><div class="icon pink">✓</div><div class="title">Human approval gate</div></div><div class="small">Critical actions stay proposed until an authorized responder confirms the reviewed payload.</div><div class="chips"><span class="chip">Policy check</span><span class="chip">Audit event</span></div></article>
+        <article class="node collab"><div class="top"><div class="icon violet">↗</div><div class="title">Collaboration outputs</div></div><div class="small">Slack publishes reviewed incident updates. Jira can receive approved owned follow-ups when configured.</div><div class="chips"><span class="chip">Slack bot</span><span class="chip">Jira adapter</span></div></article>
+        <article class="node store"><div class="top"><div class="icon mint">DB</div><div class="title">Durable enterprise state</div></div><div class="small">Encrypted credentials remain server-side; a persistent Railway volume stores identity and operational continuity.</div><div class="chips"><span class="chip">SQLite /data</span><span class="chip">Accounts</span><span class="chip">Organizations</span><span class="chip">Rooms</span><span class="chip">History</span><span class="chip">Atomic rate limits</span></div></article>
+        <article class="node otel"><div class="top"><div class="icon cyan">OT</div><div class="title">OTel Collector</div></div><div class="small">Private Railway service receives and batches OTLP traces, metrics, and logs.</div><div class="chips"><span class="chip">:4318</span><span class="chip">Datadog exporter</span></div></article>
+        <article class="node datadog"><div class="top"><div class="icon violet">DD</div><div class="title">Datadog</div></div><div class="small">Operational metrics, traces, logs, dashboard queries, and recovery verification.</div><div class="chips"><span class="chip">Metrics</span><span class="chip">APM</span><span class="chip">Logs</span></div></article>
+
+        <aside class="legend"><h2>Evidence first. Actions second.</h2><p>Gemini proposes structured interpretations; deterministic application rules own identity, permissions, quotas, room access, approvals, and external writes.</p><div class="principles"><span>No autonomous RCA</span><span>Single-speaker turns</span><span>Execution ≠ recovery</span></div></aside>
+        <div class="footer">Solid gradient = real-time data flow · Pink = approval-controlled write · Dashed mint = telemetry and recovery feedback</div>
+      </section>
+    </main>
+  </body>
+</html>

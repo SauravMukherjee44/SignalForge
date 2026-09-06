@@ -1,4 +1,6 @@
 import { getConfig, type ConfigKey } from '@/lib/runtime-config';
+import { requireUser } from '@/lib/auth';
+import { consumeUsage, rateLimitResponse } from '@/lib/rate-limit';
 
 type ActionRequest = {
   provider?: 'slack' | 'jira';
@@ -10,6 +12,9 @@ type ActionRequest = {
 const missing = (keys: ConfigKey[]) => keys.filter((key) => !getConfig(key));
 
 export async function POST(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
+  if (!['owner','admin'].includes(auth.user.organizationRole)) return Response.json({ error: 'Only organization administrators can execute external writes.' }, { status: 403 });
   const body = (await request.json()) as ActionRequest;
   if (!body.confirmed) {
     return Response.json(
@@ -17,6 +22,8 @@ export async function POST(request: Request) {
       { status: 409 },
     );
   }
+  const usage = await consumeUsage(auth.user, 'critical_action');
+  if (!usage.allowed) return rateLimitResponse(usage.limit);
   if (
     !body.provider ||
     !['slack', 'jira'].includes(body.provider)

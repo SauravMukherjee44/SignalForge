@@ -1,4 +1,5 @@
 import { getConfig } from '@/lib/runtime-config';
+import { requireUser } from '@/lib/auth';
 
 type DatadogSeries = { pointlist?: Array<[number, number | null]> };
 type DatadogResponse = { series?: DatadogSeries[]; message?: string };
@@ -29,7 +30,9 @@ async function queryLatest(query: string, from: number, to: number) {
   return latest?.[1] ?? null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
   const queries = {
     checkoutSuccess: getConfig('DATADOG_CHECKOUT_SUCCESS_QUERY'),
     paymentFailures: getConfig('DATADOG_PAYMENT_FAILURE_QUERY'),

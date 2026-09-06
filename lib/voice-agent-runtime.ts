@@ -9,7 +9,6 @@ import {
 import { getConfig } from '@/lib/runtime-config';
 import {
   findVoiceAgentProfile,
-  voiceAgentProfiles,
   type VoiceAgentProfile,
 } from '@/lib/voice-agent-profiles';
 import { incidentDemoScript } from '@/lib/incident-demo';
@@ -33,6 +32,17 @@ type DemoSession = {
 };
 
 const demoSessions = new Map<string, DemoSession>();
+
+// The Agents API acknowledges a session before its RTC audio publication is
+// necessarily visible to every listener. Give the opening speaker time to
+// publish before the first directed `say` call.
+const DEMO_AGENT_WARMUP_MS = 4_000;
+const DEMO_START_ORDER: VoiceAgentProfile['id'][] = [
+  'commander',
+  'support',
+  'sre',
+  'application',
+];
 
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
@@ -182,7 +192,11 @@ export async function startVoiceDemo(input: {
   await stopVoiceDemo(input.channel);
   const started: RunningAgent[] = [];
   try {
-    for (const profile of voiceAgentProfiles) {
+    // Ira opens the incident, so connect her first. The remaining responders
+    // starting afterwards naturally gives her the longest RTC warm-up window.
+    for (const profileId of DEMO_START_ORDER) {
+      const profile = findVoiceAgentProfile(profileId);
+      if (!profile) throw new Error(`Missing voice profile: ${profileId}`);
       started.push(
         await startVoiceAgent({
           profileId: profile.id,
@@ -205,7 +219,7 @@ export async function startVoiceDemo(input: {
     index: 0,
     requesterUid: input.requesterUid,
     startedAt: new Date().toISOString(),
-    readyAt: 0,
+    readyAt: Date.now() + DEMO_AGENT_WARMUP_MS,
     advancing: false,
   });
   return getVoiceDemoState(input.channel);

@@ -1,4 +1,5 @@
 import { getConfig } from '@/lib/runtime-config';
+import { requireUser } from '@/lib/auth';
 
 type DatadogLog = {
   id: string;
@@ -16,7 +17,9 @@ type DatadogLogResponse = {
   errors?: Array<{ detail?: string; title?: string }>;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
   const apiKey = getConfig('DATADOG_API_KEY');
   const appKey = getConfig('DATADOG_APP_KEY');
   if (!apiKey || !appKey) {

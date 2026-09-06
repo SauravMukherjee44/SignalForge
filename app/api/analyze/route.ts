@@ -1,5 +1,7 @@
 import { emitOtelIncidentEvent } from '@/lib/otel';
 import { getConfig } from '@/lib/runtime-config';
+import { requireUser } from '@/lib/auth';
+import { consumeUsage, rateLimitResponse } from '@/lib/rate-limit';
 
 type Analysis = {
   category:
@@ -59,6 +61,10 @@ function localAnalysis(text: string): Analysis {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
+  const usage = await consumeUsage(auth.user, 'gemini');
+  if (!usage.allowed) return rateLimitResponse(usage.limit);
   const body = (await request.json()) as {
     transcript?: unknown;
     speaker?: unknown;

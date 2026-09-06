@@ -1,0 +1,11 @@
+# Railway private DNS supports IPv6; listen on both network families.
+extensions:
+  health_check:
+    endpoint: "[::]:13133"
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: "[::]:4318"
+      grpc:
+        endpoint: "[::]:4317"

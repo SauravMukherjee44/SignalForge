@@ -1,6 +1,9 @@
 import { getConfig, isConfigured } from '@/lib/runtime-config';
+import { requireUser } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
   const otlpEndpoint =
     getConfig('OTEL_EXPORTER_OTLP_ENDPOINT') || 'http://localhost:4318';
   let collectorConnected = false;

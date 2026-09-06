@@ -1,7 +1,10 @@
 import { emitOtelIncidentEvent } from '@/lib/otel';
 import { getConfig } from '@/lib/runtime-config';
+import { requireUser } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
   const healthEndpoint =
     getConfig('OTEL_EXPORTER_OTLP_ENDPOINT') || 'http://localhost:4318';
   const healthUrl = healthEndpoint.replace(/:\d+\/?$/, ':13133/');
@@ -19,7 +22,9 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
   try {
     const result = await emitOtelIncidentEvent(
       'otel.pipeline.test',

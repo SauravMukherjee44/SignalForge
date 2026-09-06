@@ -11,6 +11,8 @@ import {
   stopVoiceDemo,
 } from '@/lib/voice-agent-runtime';
 import { voiceAgentProfiles } from '@/lib/voice-agent-profiles';
+import { authorizeRoom, requireUser } from '@/lib/auth';
+import { consumeUsage, rateLimitResponse } from '@/lib/rate-limit';
 
 const CHANNEL_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const UID_PATTERN = /^\d{1,10}$/;
@@ -23,6 +25,9 @@ function isCompatibleRtcUid(value: unknown): value is string {
 
 export async function GET(request: Request) {
   const channel = new URL(request.url).searchParams.get('channel') ?? undefined;
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
+  if (!channel || !(await authorizeRoom(auth.user, channel))) return Response.json({ error: 'Room access denied.' }, { status: 403 });
   const history = await getVoiceAgentHistory(channel);
   return Response.json({
     profiles: voiceAgentProfiles,
@@ -33,6 +38,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireUser(request);
+  if ('response' in auth) return auth.response;
   const body = (await request.json()) as {
     action?: unknown;
     profileId?: unknown;
@@ -49,6 +56,13 @@ export async function POST(request: Request) {
       { error: 'A valid action and channel are required.' },
       { status: 400 },
     );
+  }
+  const authorizedRoom = await authorizeRoom(auth.user, body.channel);
+  if (!authorizedRoom) return Response.json({ error: 'Room access denied.' }, { status: 403 });
+  if (['demo-start','start','stop'].includes(body.action) && !authorizedRoom.canManage) return Response.json({ error: 'Only room commanders can manage AI responders.' }, { status: 403 });
+  if (['demo-start','demo-next','start'].includes(body.action)) {
+    const usage = await consumeUsage(auth.user, 'voice');
+    if (!usage.allowed) return rateLimitResponse(usage.limit);
   }
   try {
     if (body.action === 'demo-stop') {

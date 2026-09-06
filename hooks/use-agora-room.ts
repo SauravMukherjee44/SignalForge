@@ -67,13 +67,17 @@ function installAgoraSdpCompatibilityFix() {
   prototype.__signalForgeAgoraSdpFix = true;
 }
 
-export function useAgoraRoom(appId: string, identity: ParticipantIdentity) {
+export function useAgoraRoom(
+  appId: string,
+  identity: ParticipantIdentity,
+  initialChannel = 'payments-war-room',
+) {
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const microphoneRef = useRef<IMicrophoneAudioTrack | null>(null);
   const uidRef = useRef<UID | null>(null);
   const identityRef = useRef(identity);
   const [state, setState] = useState<RoomState>('idle');
-  const [channel, setChannel] = useState('payments-war-room');
+  const [channel, setChannel] = useState(normalizeAgoraChannel(initialChannel));
   const [uid, setUid] = useState<UID | null>(null);
   const [remoteUsers, setRemoteUsers] = useState<UID[]>([]);
   const [activeSpeaker, setActiveSpeaker] = useState<UID | null>(null);
@@ -179,9 +183,24 @@ export function useAgoraRoom(appId: string, identity: ParticipantIdentity) {
         clientRef.current = client;
 
         client.on('user-published', async (user, mediaType) => {
-          await client.subscribe(user, mediaType);
-          if (mediaType === 'audio') user.audioTrack?.play();
-          setRemoteUsers(client.remoteUsers.map((item) => item.uid));
+          try {
+            await client.subscribe(user, mediaType);
+            if (mediaType === 'audio') user.audioTrack?.play();
+          } catch (subscriptionError) {
+            // A responder can publish while the page is leaving or Vite is
+            // reconnecting during development. Keep that race contained and
+            // give the operator a recoverable message instead of an unhandled
+            // promise rejection overlay.
+            if (client.connectionState === 'CONNECTED') {
+              setError(
+                subscriptionError instanceof Error
+                  ? `A responder joined, but its audio could not start: ${subscriptionError.message}`
+                  : 'A responder joined, but its audio could not start. Restart the response team.',
+              );
+            }
+          } finally {
+            setRemoteUsers(client.remoteUsers.map((item) => item.uid));
+          }
         });
         client.on('user-joined', () => {
           setRemoteUsers(client.remoteUsers.map((item) => item.uid));
